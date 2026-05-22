@@ -10,7 +10,10 @@ const userRoutes = require('./routes/user');
 const app = express();
 
 // ── MIDDLEWARE ──
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }));
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -34,15 +37,24 @@ app.use((err, req, res, next) => {
 });
 
 // ── MONGODB CONNECTION ──
-mongoose.connect(process.env.MONGO_URI, {
-  family: 4
-})
-  .then(() => {
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected) return;
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    isConnected = true;
     console.log('✅ MongoDB connecté');
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`));
-  })
-  .catch(err => {
+  } catch (err) {
     console.error('❌ Erreur MongoDB:', err.message);
-    process.exit(1);
-  });
+  }
+};
+connectDB();
+
+// ── EXPORT pour Vercel Serverless ──
+module.exports = app;
+
+// ── Lancer localement ──
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`));
+}
