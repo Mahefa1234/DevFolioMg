@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>DevFolioMG — Connexion / Inscription</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f6f5f0;--bg2:#ffffff;--bg3:#eeede6;
+  --text:#1a1a14;--text2:#4a4a40;--text3:#9a9a8a;
+  --green:#1d6a40;--green2:#25a058;--green-light:#e8f5ee;--green-border:#b8ddc8;
+  --border:#e2e1d8;--border2:#c8c7bc;
+  --danger:#dc2626;--success:#16a34a;
+  --r:12px;--r2:16px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Bricolage Grotesque',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+
+/* NAV */
+nav{height:60px;background:rgba(246,245,240,0.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;position:sticky;top:0;z-index:99}
+.logo{font-family:'JetBrains Mono',monospace;font-size:0.95rem;font-weight:500;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:6px}
+.logo-dot{width:7px;height:7px;border-radius:50%;background:var(--green2);animation:blink 2s infinite;display:inline-block}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.nav-back{font-size:0.82rem;color:var(--text2);text-decoration:none;display:flex;align-items:center;gap:0.4rem;transition:color 0.2s}
+.nav-back:hover{color:var(--text)}
+
+/* MAIN */
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:3rem 1.5rem;position:relative;overflow:hidden}
+main::before{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:44px 44px;opacity:0.5;mask-image:radial-gradient(ellipse 70% 60% at 50% 40%,black,transparent)}
+.blob{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none}
+.b1{width:400px;height:400px;background:radial-gradient(circle,rgba(37,160,88,0.07),transparent 70%);top:-80px;right:-80px}
+.b2{width:300px;height:300px;background:radial-gradient(circle,rgba(29,106,64,0.05),transparent 70%);bottom:-60px;left:-60px}
+
+/* CARD */
+.auth-wrap{width:100%;max-width:420px;position:relative;z-index:1}
+.auth-logo{text-align:center;margin-bottom:1.75rem}
+.tabs{display:flex;background:var(--bg3);border-radius:var(--r2);padding:4px;margin-bottom:1.5rem;border:1px solid var(--border)}
+.tab{flex:1;padding:8px;border:none;border-radius:var(--r);font-family:'Bricolage Grotesque',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.2s;background:transparent;color:var(--text2)}
+.tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.card{background:var(--bg2);border-radius:var(--r2);border:1px solid var(--border);padding:2rem}
+.card-title{font-family:'Lora',serif;font-size:1.25rem;font-weight:400;margin:0 0 0.25rem}
+.card-sub{font-size:0.8rem;color:var(--text2);margin:0 0 1.5rem;line-height:1.6}
+
+/* FORM */
+.fgroup{margin-bottom:1rem}
+.fgroup label{display:block;font-size:0.68rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px}
+.fgroup input{width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'Bricolage Grotesque',sans-serif;font-size:0.88rem;outline:none;transition:all 0.2s}
+.fgroup input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(29,106,64,0.08)}
+.fgroup input::placeholder{color:var(--text3)}
+.input-wrap{position:relative}
+.input-wrap input{padding-right:40px}
+.eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text3);font-size:1rem;padding:0;transition:color 0.2s}
+.eye-btn:hover{color:var(--text2)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem}
+.username-wrap{position:relative}
+.username-prefix{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:0.75rem;color:var(--text3);font-family:'JetBrains Mono',monospace;pointer-events:none;white-space:nowrap}
+.username-input{padding-left:128px !important;font-family:'JetBrains Mono',monospace !important}
+.field-msg{font-size:0.72rem;margin-top:4px;min-height:14px;transition:color 0.2s}
+.field-msg.ok{color:var(--success)}.field-msg.err{color:var(--danger)}.field-msg.info{color:var(--text3)}
+
+/* PASSWORD STRENGTH */
+.pwd-bars{display:flex;gap:4px;margin-top:6px}
+.pwd-bar{height:3px;flex:1;border-radius:2px;background:var(--border);transition:background 0.3s}
+.pwd-label{font-size:0.68rem;margin-top:3px;color:var(--text3)}
+
+/* LINKS ROW */
+.link-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.link-row label{font-size:0.68rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em}
+.link-small{font-size:0.78rem;color:var(--green);text-decoration:none;font-weight:500}
+.link-small:hover{text-decoration:underline}
+
+/* CHECKBOX */
+.check-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:1.25rem}
+.check-row input[type="checkbox"]{width:15px;height:15px;margin-top:2px;flex-shrink:0;accent-color:var(--green)}
+.check-row label{font-size:0.78rem;color:var(--text2);line-height:1.5}
+.check-row a{color:var(--green);text-decoration:none;font-weight:500}
+
+/* BUTTONS */
+.btn-primary{width:100%;padding:11px;background:var(--text);color:#fff;border:none;border-radius:100px;font-family:'Bricolage Grotesque',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-primary:hover{background:#2a2a20;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,0.15)}
+.btn-primary:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+
+/* DIVIDER */
+.divider{display:flex;align-items:center;gap:0.75rem;margin:1rem 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.divider span{font-size:0.72rem;color:var(--text3)}
+
+/* GOOGLE */
+.btn-google{width:100%;padding:10px;background:transparent;border:1px solid var(--border2);border-radius:100px;font-family:'Bricolage Grotesque',sans-serif;font-size:0.85rem;font-weight:500;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s}
+.btn-google:hover{background:var(--bg3);border-color:var(--text)}
+
+/* SWITCH */
+.switch-txt{text-align:center;font-size:0.8rem;color:var(--text2);margin-top:1.25rem;margin-bottom:0}
+.switch-txt a{color:var(--green);text-decoration:none;font-weight:600}
+.switch-txt a:hover{text-decoration:underline}
+
+/* SUCCESS */
+.success-screen{text-align:center;padding:1rem 0}
+.success-icon{width:60px;height:60px;border-radius:50%;background:var(--green-light);border:1px solid var(--green-border);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:1.5rem}
+.success-screen h2{font-family:'Lora',serif;font-size:1.3rem;font-weight:400;margin-bottom:0.5rem}
+.success-screen p{font-size:0.82rem;color:var(--text2);margin-bottom:1.75rem;line-height:1.6}
+.btn-dashboard{display:inline-flex;align-items:center;gap:6px;padding:11px 1.75rem;background:var(--text);color:#fff;border:none;border-radius:100px;font-family:'Bricolage Grotesque',sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;text-decoration:none;transition:all 0.2s}
+.btn-dashboard:hover{background:#2a2a20;transform:translateY(-1px)}
+
+/* FOOTER */
+footer{padding:1.25rem;text-align:center;font-size:0.72rem;color:var(--text3);border-top:1px solid var(--border)}
+
+/* SPINNER */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{animation:spin 0.8s linear infinite;display:inline-block}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="devfoliomg_react.html" class="nav-back"><i class="fas fa-arrow-left"></i> Retour</a>
+  <a href="devfoliomg_react.html" class="logo"><span class="logo-dot"></span> DevFolioMG</a>
+  <span style="width:80px"></span>
+</nav>
+
+<main>
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <a href="devfoliomg_react.html" class="logo" style="justify-content:center;font-size:1.1rem;"><span class="logo-dot"></span> DevFolioMG</a>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-btn-login" onclick="showTab('login')">Connexion</button>
+      <button class="tab" id="tab-btn-register" onclick="showTab('register')">Inscription</button>
+    </div>
+
+    <div class="card">
+
+      <!-- LOGIN -->
+      <div id="tab-login">
+        <p class="card-title">Bon retour 👋</p>
+        <p class="card-sub">Connecte-toi pour accéder à ton portfolio.</p>
+
+        <div class="fgroup">
+          <label>Email</label>
+          <input type="email" id="login-email" placeholder="ton@email.com"/>
+        </div>
+
+        <div class="fgroup">
+          <div class="link-row">
+            <label>Mot de passe</label>
+            <a href="#" class="link-small">Mot de passe oublié ?</a>
+          </div>
+          <div class="input-wrap">
+            <input type="password" id="pwd-login" placeholder="••••••••"/>
+            <button class="eye-btn" onclick="togglePwd('pwd-login')"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+
+        <div class="check-row" style="margin-bottom:1.25rem">
+          <input type="checkbox" id="remember"/>
+          <label for="remember">Se souvenir de moi</label>
+        </div>
+
+        <button class="btn-primary" id="login-btn" onclick="handleLogin()">
+          <i class="fas fa-sign-in-alt"></i> Se connecter
+        </button>
+
+        <div class="divider"><span>ou</span></div>
+
+        <button class="btn-google">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continuer avec Google
+        </button>
+
+        <p class="switch-txt">Pas encore de compte ? <a href="#" onclick="showTab('register')">S'inscrire gratuitement</a></p>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="tab-register" style="display:none">
+        <p class="card-title">Créer mon compte</p>
+        <p class="card-sub">100% gratuit — aucune carte bancaire requise.</p>
+
+        <div class="row2">
+          <div class="fgroup">
+            <label>Prénom</label>
+            <input type="text" placeholder="Mahefa"/>
+          </div>
+          <div class="fgroup">
+            <label>Nom</label>
+            <input type="text" placeholder="Iarantsoa"/>
+          </div>
+        </div>
+
+        <div class="fgroup">
+          <label>Nom d'utilisateur</label>
+          <div class="username-wrap">
+            <span class="username-prefix">devfoliomg.mg/</span>
+            <input type="text" id="username" class="username-input" placeholder="tonnom" oninput="checkUsername()"/>
+          </div>
+          <div class="field-msg info" id="username-msg"></div>
+        </div>
+
+        <div class="fgroup">
+          <label>Email</label>
+          <input type="email" placeholder="ton@email.com"/>
+        </div>
+
+        <div class="fgroup">
+          <label>Mot de passe</label>
+          <div class="input-wrap">
+            <input type="password" id="pwd-register" placeholder="Minimum 8 caractères" oninput="checkPwd()"/>
+            <button class="eye-btn" onclick="togglePwd('pwd-register')"><i class="fas fa-eye"></i></button>
+          </div>
+          <div class="pwd-bars">
+            <div class="pwd-bar" id="b1"></div>
+            <div class="pwd-bar" id="b2"></div>
+            <div class="pwd-bar" id="b3"></div>
+            <div class="pwd-bar" id="b4"></div>
+          </div>
+          <div class="pwd-label" id="pwd-lbl"></div>
+        </div>
+
+        <div class="check-row">
+          <input type="checkbox" id="terms"/>
+          <label for="terms">J'accepte les <a href="#">conditions d'utilisation</a> et la <a href="#">politique de confidentialité</a></label>
+        </div>
+
+        <button class="btn-primary" id="register-btn" onclick="handleRegister()">
+          <i class="fas fa-rocket"></i> Créer mon portfolio gratuitement
+        </button>
+
+        <div class="divider"><span>ou</span></div>
+
+        <button class="btn-google">
+          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continuer avec Google
+        </button>
+
+        <p class="switch-txt">Déjà un compte ? <a href="#" onclick="showTab('login')">Se connecter</a></p>
+      </div>
+
+      <!-- SUCCESS -->
+      <div id="tab-success" style="display:none">
+        <div class="success-screen">
+          <div class="success-icon">✅</div>
+          <h2>Compte créé !</h2>
+          <p>Bienvenue sur DevFolioMG.<br/>Ton portfolio t'attend.</p>
+          <a href="dashboard.html" class="btn-dashboard"><i class="fas fa-rocket"></i> Accéder à mon dashboard</a>
+        </div>
+      </div>
+
+    </div>
+
+    <footer>🇲🇬 DevFolioMG · 100% gratuit pour toujours</footer>
+  </div>
+</main>
+
+<script>
+function showTab(tab) {
+  ['login','register','success'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
+  });
+  ['login','register'].forEach(t => {
+    const btn = document.getElementById('tab-btn-'+t);
+    if(btn) { btn.classList.toggle('active', t===tab); }
+  });
+}
+
+function togglePwd(id) {
+  const inp = document.getElementById(id);
+  const btn = inp.nextElementSibling;
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+  } else {
+    inp.type = 'password';
+    btn.innerHTML = '<i class="fas fa-eye"></i>';
+  }
+}
+
+let usrTimer;
+function checkUsername() {
+  clearTimeout(usrTimer);
+  const val = document.getElementById('username').value;
+  const msg = document.getElementById('username-msg');
+  if (!val) { msg.textContent=''; msg.className='field-msg info'; return; }
+  msg.textContent = '⏳ Vérification...';
+  msg.className = 'field-msg info';
+  usrTimer = setTimeout(() => {
+    const taken = ['mahefa','ravo','toky','aina','dev','admin','test'].includes(val.toLowerCase());
+    if (val.length < 3) {
+      msg.textContent = '✗ Minimum 3 caractères requis';
+      msg.className = 'field-msg err';
+    } else if (taken) {
+      msg.textContent = '✗ Ce nom est déjà pris';
+      msg.className = 'field-msg err';
+    } else {
+      msg.textContent = '✓ devfoliomg.mg/' + val + ' est disponible !';
+      msg.className = 'field-msg ok';
+    }
+  }, 650);
+}
+
+function checkPwd() {
+  const val = document.getElementById('pwd-register').value;
+  const colors = ['#ef4444','#f97316','#eab308','#22c55e'];
+  const labels = ['Très faible','Faible','Moyen','Fort'];
+  let score = 0;
+  if (val.length >= 8) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  for (let i=1;i<=4;i++) {
+    document.getElementById('b'+i).style.background = i<=score ? colors[score-1] : 'var(--border)';
+  }
+  const lbl = document.getElementById('pwd-lbl');
+  lbl.textContent = val.length > 0 ? labels[score-1]||'' : '';
+  lbl.style.color = score > 0 ? colors[score-1] : 'var(--text3)';
+}
+
+function handleLogin() {
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Connexion...';
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Se connecter';
+    showTab('success');
+    document.getElementById('tab-btn-login').style.display='none';
+    document.getElementById('tab-btn-register').style.display='none';
+  }, 1300);
+}
+
+function handleRegister() {
+  const btn = document.getElementById('register-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner spinner"></i> Création en cours...';
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-rocket"></i> Créer mon portfolio gratuitement';
+    showTab('success');
+    document.getElementById('tab-btn-login').style.display='none';
+    document.getElementById('tab-btn-register').style.display='none';
+  }, 1500);
+}
+</script>
+</body>
+</html>

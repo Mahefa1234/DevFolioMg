@@ -1,0 +1,6 @@
+node_modules/      ← dossiers énormes, inutile de les pousser
+.env               ← tes mots de passe / clés API (TRÈS IMPORTANT)
+dist/              ← fichiers générés par le build
+*.log              ← fichiers de logs
+.DS_Store          ← fichiers Mac inutiles
+node_modules
