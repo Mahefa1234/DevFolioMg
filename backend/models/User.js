@@ -10,15 +10,16 @@ const UserSchema = new mongoose.Schema({
   avatar: { type: String, default: '' },
   avatarPublicId: { type: String, default: '' },
   isVerified: { type: Boolean, default: false },
-  verificationToken: { type: String },
   resetPasswordToken: { type: String },
   resetPasswordExpire: { type: Date },
-  template: { type: String, default: 'minimal', enum: ['minimal', 'dark', 'forest'] },
+  template: {
+    type: String,
+    default: 'minimal',
+    enum: ['minimal', 'dark', 'forest', 'terminal', 'glass', 'gradient', 'card', 'magazine']
+  },
   isPublic: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// ── Hash password avant sauvegarde ──
 UserSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(12);
@@ -26,7 +27,6 @@ UserSchema.pre('save', async function(next) {
   next();
 });
 
-// ── Comparer password ──
 UserSchema.methods.comparePassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
