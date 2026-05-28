@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+ import { exportToPDF } from '../utils/exportPDF';
 import { useAuth } from '../context/AuthContext';
 import {
   getMyPortfolio, updatePortfolio,
@@ -117,6 +118,19 @@ function Overview({ portfolio, user }) {
           <Btn variant="ghost" onClick={() => { navigator.clipboard.writeText(`https://devfoliomg.vercel.app/p/${user?.username}`); toast.success('Lien copié !'); }}>📋 Copier</Btn>
           <Link to={`/p/${user?.username}`} target="_blank"><Btn variant="ghost">↗ Voir</Btn></Link>
         </div>
+       
+
+<Btn variant="ghost" onClick={async () => {
+  const toastId = toast.loading('Génération du PDF...');
+  try {
+    await exportToPDF(user, portfolio);
+    toast.success('PDF téléchargé !', { id: toastId });
+  } catch {
+    toast.error('Erreur PDF', { id: toastId });
+  }
+}}>
+  📄 Exporter CV
+</Btn>
       </Card>
     </div>
   );
