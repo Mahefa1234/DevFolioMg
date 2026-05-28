@@ -245,10 +245,11 @@ export default function AuthPage() {
                   <div className="flex-1 h-px bg-[#e2e1d8]"></div>
                 </div>
 
-                <button onClick={() => window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`}>
+               <button type="button" onClick={() => window.location.href = `${import.meta.env.VITE_API_URL}/auth/google`}
+  className="w-full py-2.5 border border-[#c8c7bc] rounded-full text-sm font-medium hover:bg-[#f6f5f0] transition-all flex items-center justify-center gap-2">
   <GoogleIcon/> Continuer avec Google
 </button>
-
+        
                 <p className="text-center text-sm text-[#4a4a40] mt-5">
                   Déjà un compte ? <button type="button" onClick={() => setTab('login')} className="text-[#1d6a40] font-semibold hover:underline">Se connecter</button>
                 </p>
