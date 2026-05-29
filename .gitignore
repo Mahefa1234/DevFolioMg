@@ -4,3 +4,4 @@ dist/              ← fichiers générés par le build
 *.log              ← fichiers de logs
 .DS_Store          ← fichiers Mac inutiles
 node_modules
+backend/.env
