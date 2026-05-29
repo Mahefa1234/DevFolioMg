@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard';
 import PublicPortfolio from './pages/PublicPortfolio';
 import NotFound from './pages/NotFound';
 import AuthCallback from './pages/AuthCallback';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Route protégée — redirige vers /auth si non connecté
 const PrivateRoute = ({ children }) => {
@@ -38,6 +40,8 @@ function AppRoutes() {
       <Route path="/p/:username" element={<PublicPortfolio />} />
       <Route path="*" element={<NotFound />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+<Route path="/reset-password" element={<ResetPassword />} />
     </Routes>
   );
 }

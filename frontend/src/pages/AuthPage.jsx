@@ -128,6 +128,10 @@ export default function AuthPage() {
                     <label className="text-[0.68rem] font-semibold text-[#9a9a8a] uppercase tracking-widest">Mot de passe</label>
                     <a href="#" className="text-xs text-[#1d6a40] hover:underline">Oublié ?</a>
                   </div>
+
+                  <Link to="/forgot-password" className="text-xs text-[#1d6a40] hover:underline">
+                    Mot de passe oublié ?
+                  </Link>
                   <div className="relative">
                     <input type={showPwd ? 'text' : 'password'} value={loginData.password} onChange={e => setLoginData(p => ({...p, password: e.target.value}))}
                       placeholder="••••••••" required
