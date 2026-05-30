@@ -1,12 +1,15 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const passport = require('passport');
 require('dotenv').config();
+
+const authRoutes = require('./routes/auth');
+const portfolioRoutes = require('./routes/portfolio');
+const userRoutes = require('./routes/user');
 
 const app = express();
 
-// ── CORS ──
+// ── CORS — accepte toutes les origines Vercel + localhost ──
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -16,7 +19,9 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
+    // Autoriser les requêtes sans origine (Postman, curl)
     if (!origin) return callback(null, true);
+    // Autoriser toutes les URLs vercel.app pour les previews
     if (origin.includes('vercel.app') || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
@@ -27,9 +32,6 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// ── PASSPORT ──
-app.use(passport.initialize());
 
 // ── ROUTES ──
 app.use('/api/auth',      require('./routes/auth'));
