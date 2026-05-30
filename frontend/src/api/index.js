@@ -51,4 +51,8 @@ export const updateProfile = (data) => API.put('/user/profile', data);
 export const updatePassword = (data) => API.put('/user/password', data);
 export const uploadAvatar = (formData) => API.post('/user/avatar', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
 
+// ── ANALYTICS ──
+export const getMyAnalytics = () => API.get('/analytics/me');
+export const getAdminAnalytics = () => API.get('/analytics/admin');
+
 export default API;

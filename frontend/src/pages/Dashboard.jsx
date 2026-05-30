@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
- import { exportToPDF } from '../utils/exportPDF';
+import { exportToPDF } from '../utils/exportPDF';
 import { useAuth } from '../context/AuthContext';
 import {
   getMyPortfolio, updatePortfolio,
   addProjet, deleteProjet,
   addExperience, deleteExperience,
   addCompetence, deleteCompetence,
-  updateProfile, uploadAvatar
+  updateProfile, uploadAvatar,
+  getMyAnalytics, getAdminAnalytics,
 } from '../api';
 import toast from 'react-hot-toast';
 
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
+
 const navItems = [
   { id: 'overview',     icon: '📊', label: 'Vue générale' },
+  { id: 'analytics',    icon: '📈', label: 'Analytics' },
   { id: 'profile',      icon: '👤', label: 'Mon profil' },
   { id: 'projets',      icon: '🚀', label: 'Projets' },
   { id: 'experiences',  icon: '💼', label: 'Expériences' },
@@ -56,6 +60,217 @@ const Card = ({ title, children, action }) => (
     {children}
   </div>
 );
+
+// ── Mini bar chart SVG ──
+function MiniBarChart({ data, color = '#1d6a40' }) {
+  if (!data || data.length === 0) return (
+    <div className="h-32 flex items-center justify-center text-sm text-[#9a9a8a]">Aucune donnée</div>
+  );
+  const max = Math.max(...data.map(d => d.count), 1);
+  const last30 = data.slice(-30);
+  return (
+    <div className="flex items-end gap-0.5 h-32 w-full">
+      {last30.map((d, i) => (
+        <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
+          <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-[#1a1a14] text-white text-[0.6rem] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            {d.date?.slice(5)}: {d.count}
+          </div>
+          <div
+            className="w-full rounded-t transition-all"
+            style={{ height: `${(d.count / max) * 100}%`, background: color, minHeight: d.count > 0 ? 3 : 0 }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Barre de pays ──
+function PaysBar({ data }) {
+  if (!data || data.length === 0) return <p className="text-sm text-[#9a9a8a]">Aucune donnée</p>;
+  const max = Math.max(...data.map(d => d.count), 1);
+  const flags = { 'Madagascar':'🇲🇬','France':'🇫🇷','United States':'🇺🇸','Germany':'🇩🇪','Canada':'🇨🇦','United Kingdom':'🇬🇧','Belgium':'🇧🇪','Switzerland':'🇨🇭','Réunion':'🇷🇪','Mauritius':'🇲🇺','Comoros':'🇰🇲','Local':'💻','Inconnu':'🌍' };
+  return (
+    <div className="space-y-3">
+      {data.map((d, i) => (
+        <div key={i} className="flex items-center gap-3">
+          <span className="text-lg w-7 flex-shrink-0">{flags[d.pays] || '🌍'}</span>
+          <div className="flex-1">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-[#4a4a40] font-medium">{d.pays}</span>
+              <span className="text-[#9a9a8a]">{d.count} vue{d.count > 1 ? 's' : ''}</span>
+            </div>
+            <div className="h-1.5 bg-[#f6f5f0] rounded-full overflow-hidden">
+              <div className="h-full bg-[#1d6a40] rounded-full transition-all duration-700" style={{ width: `${(d.count / max) * 100}%` }} />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── ANALYTICS (vue utilisateur) ──
+function Analytics({ portfolio, user, isAdmin }) {
+  const [stats, setStats]   = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [view, setView]     = useState('personal'); // 'personal' | 'admin'
+
+  useEffect(() => {
+    const fetch = async () => {
+      setLoading(true);
+      try {
+        if (view === 'admin' && isAdmin) {
+          const res = await getAdminAnalytics();
+          setStats({ ...res.data.stats, mode: 'admin' });
+        } else {
+          const res = await getMyAnalytics();
+          setStats({ ...res.data.stats, mode: 'personal' });
+        }
+      } catch { toast.error('Erreur chargement analytics'); }
+      finally { setLoading(false); }
+    };
+    fetch();
+  }, [view]);
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 border-2 border-[#1d6a40] border-t-transparent rounded-full animate-spin"/>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="font-serif text-2xl font-normal">Analytics</h2>
+          <p className="text-sm text-[#9a9a8a] mt-0.5">Statistiques des 30 derniers jours</p>
+        </div>
+        {isAdmin && (
+          <div className="flex gap-2">
+            <Btn variant={view === 'personal' ? 'primary' : 'ghost'} onClick={() => setView('personal')}>👤 Mon portfolio</Btn>
+            <Btn variant={view === 'admin' ? 'primary' : 'ghost'} onClick={() => setView('admin')}>🛡 Admin global</Btn>
+          </div>
+        )}
+      </div>
+
+      {/* ── Stats personnelles ── */}
+      {stats?.mode === 'personal' && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white border border-[#e2e1d8] rounded-2xl p-5 text-center hover:border-[#b8ddc8] transition-all">
+              <div className="text-2xl mb-2">👁</div>
+              <div className="font-serif text-3xl font-normal text-[#1a1a14]">{stats.totalVues}</div>
+              <div className="text-xs text-[#9a9a8a] mt-1">Vues totales</div>
+            </div>
+            <div className="bg-white border border-[#e2e1d8] rounded-2xl p-5 text-center hover:border-[#b8ddc8] transition-all">
+              <div className="text-2xl mb-2">📅</div>
+              <div className="font-serif text-3xl font-normal text-[#1a1a14]">
+                {stats.vuesParJour?.reduce((s, d) => s + d.count, 0) || 0}
+              </div>
+              <div className="text-xs text-[#9a9a8a] mt-1">Vues (30 jours)</div>
+            </div>
+          </div>
+
+          <Card title="Vues par jour — 30 derniers jours">
+            <MiniBarChart data={stats.vuesParJour} color="#1d6a40" />
+          </Card>
+
+          <Card title="Pays des visiteurs">
+            <PaysBar data={stats.pays} />
+          </Card>
+        </>
+      )}
+
+      {/* ── Stats admin ── */}
+      {stats?.mode === 'admin' && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { icon: '👥', value: stats.totalUsers, label: 'Inscrits' },
+              { icon: '👁', value: stats.totalVues, label: 'Vues totales' },
+              { icon: '📅', value: stats.vuesParJour?.reduce((s,d)=>s+d.count,0)||0, label: 'Vues (30j)' },
+              { icon: '🆕', value: stats.usersParJour?.reduce((s,d)=>s+d.count,0)||0, label: 'Nouveaux (30j)' },
+            ].map((s, i) => (
+              <div key={i} className="bg-white border border-[#e2e1d8] rounded-2xl p-5 text-center hover:border-[#b8ddc8] transition-all">
+                <div className="text-2xl mb-2">{s.icon}</div>
+                <div className="font-serif text-3xl font-normal text-[#1a1a14]">{s.value}</div>
+                <div className="text-xs text-[#9a9a8a] mt-1">{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <Card title="Vues par jour — 30 derniers jours">
+            <MiniBarChart data={stats.vuesParJour} color="#1d6a40" />
+          </Card>
+
+          <Card title="Inscriptions par jour — 30 derniers jours">
+            <MiniBarChart data={stats.usersParJour} color="#667eea" />
+          </Card>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Card title="Pays des visiteurs">
+              <PaysBar data={stats.pays} />
+            </Card>
+
+            <Card title="Top portfolios">
+              {stats.topPortfolios?.length === 0
+                ? <p className="text-sm text-[#9a9a8a]">Aucune donnée</p>
+                : (
+                  <div className="space-y-3">
+                    {stats.topPortfolios?.map((p, i) => (
+                      <div key={i} className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-[#9a9a8a] w-5">#{i+1}</span>
+                        <Link to={`/p/${p.username}`} target="_blank" className="flex-1 font-mono text-sm text-[#1d6a40] hover:underline">@{p.username}</Link>
+                        <span className="text-xs text-[#9a9a8a]">{p.vues} vues</span>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+            </Card>
+          </div>
+
+          <Card title="Derniers inscrits">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[0.68rem] text-[#9a9a8a] uppercase tracking-wider border-b border-[#e2e1d8]">
+                    <th className="text-left pb-3 font-semibold">Utilisateur</th>
+                    <th className="text-left pb-3 font-semibold">Email</th>
+                    <th className="text-left pb-3 font-semibold">Inscrit le</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#f6f5f0]">
+                  {stats.recentUsers?.map((u) => (
+                    <tr key={u._id} className="hover:bg-[#f6f5f0] transition-colors">
+                      <td className="py-3 pr-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-[#e8f5ee] border border-[#b8ddc8] overflow-hidden flex items-center justify-center flex-shrink-0">
+                            {u.avatar
+                              ? <img src={u.avatar} alt="" className="w-full h-full object-cover"/>
+                              : <span className="text-xs font-serif text-[#1d6a40] italic">{u.prenom?.[0]}</span>
+                            }
+                          </div>
+                          <div>
+                            <div className="font-medium text-[#1a1a14]">{u.prenom} {u.nom}</div>
+                            <Link to={`/p/${u.username}`} target="_blank" className="font-mono text-[0.7rem] text-[#1d6a40] hover:underline">@{u.username}</Link>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4 text-[#4a4a40] text-xs">{u.email}</td>
+                      <td className="py-3 text-[#9a9a8a] text-xs">{new Date(u.createdAt).toLocaleDateString('fr-FR')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
 
 function Overview({ portfolio, user }) {
   const stats = [
@@ -118,19 +333,11 @@ function Overview({ portfolio, user }) {
           <Btn variant="ghost" onClick={() => { navigator.clipboard.writeText(`https://devfoliomg.vercel.app/p/${user?.username}`); toast.success('Lien copié !'); }}>📋 Copier</Btn>
           <Link to={`/p/${user?.username}`} target="_blank"><Btn variant="ghost">↗ Voir</Btn></Link>
         </div>
-       
-
-<Btn variant="ghost" onClick={async () => {
-  const toastId = toast.loading('Génération du PDF...');
-  try {
-    await exportToPDF(user, portfolio);
-    toast.success('PDF téléchargé !', { id: toastId });
-  } catch {
-    toast.error('Erreur PDF', { id: toastId });
-  }
-}}>
-  📄 Exporter CV
-</Btn>
+        <Btn variant="ghost" onClick={async () => {
+          const toastId = toast.loading('Génération du PDF...');
+          try { await exportToPDF(user, portfolio); toast.success('PDF téléchargé !', { id: toastId }); }
+          catch { toast.error('Erreur PDF', { id: toastId }); }
+        }}>📄 Exporter CV</Btn>
       </Card>
     </div>
   );
@@ -339,15 +546,16 @@ function Competences({ portfolio, onRefresh }) {
   const [form, setForm] = useState({ nom:'', niveau:80, categorie:'Frontend' });
   const categories = ['Frontend','Backend','Base de données','DevOps','Mobile','Design','Management','Autre'];
   const handleAdd = async () => {
-    if (!form.nom) return toast.error('Nom requis');
+    if (!form.nom) return toast.error('Le nom est requis');
     setLoading(true);
-    try { await addCompetence(form); toast.success('Ajoutée !'); setForm({nom:'',niveau:80,categorie:'Frontend'}); setShowForm(false); onRefresh(); }
+    try { await addCompetence(form); toast.success('Compétence ajoutée !'); setForm({nom:'',niveau:80,categorie:'Frontend'}); setShowForm(false); onRefresh(); }
     catch { toast.error('Erreur'); } finally { setLoading(false); }
   };
   const handleDelete = async (id) => {
+    if (!confirm('Supprimer ?')) return;
     try { await deleteCompetence(id); toast.success('Supprimée'); onRefresh(); } catch { toast.error('Erreur'); }
   };
-  const grouped = portfolio?.competences?.reduce((acc,c) => { if(!acc[c.categorie]) acc[c.categorie]=[]; acc[c.categorie].push(c); return acc; },{}) || {};
+  const grouped = portfolio?.competences?.reduce((acc, c) => { (acc[c.categorie||'Autre'] = acc[c.categorie||'Autre']||[]).push(c); return acc; }, {});
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -357,18 +565,16 @@ function Competences({ portfolio, onRefresh }) {
       {showForm && (
         <Card title="Nouvelle compétence">
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Nom *" value={form.nom} onChange={e=>setForm(p=>({...p,nom:e.target.value}))} placeholder="React, Node.js..."/>
-              <div>
-                <label className="block text-[0.68rem] font-semibold text-[#9a9a8a] uppercase tracking-widest mb-1.5">Catégorie</label>
-                <select value={form.categorie} onChange={e=>setForm(p=>({...p,categorie:e.target.value}))} className="w-full px-3 py-2.5 bg-[#f6f5f0] border border-[#e2e1d8] rounded-xl text-sm outline-none focus:border-[#1d6a40] transition-all">
-                  {categories.map(c=><option key={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
+            <Input label="Compétence *" value={form.nom} onChange={e=>setForm(p=>({...p,nom:e.target.value}))} placeholder="React, Python, Figma..."/>
             <div>
               <label className="block text-[0.68rem] font-semibold text-[#9a9a8a] uppercase tracking-widest mb-1.5">Niveau : {form.niveau}%</label>
-              <input type="range" min="10" max="100" value={form.niveau} onChange={e=>setForm(p=>({...p,niveau:parseInt(e.target.value)}))} className="w-full accent-[#1d6a40]"/>
+              <input type="range" min="1" max="100" value={form.niveau} onChange={e=>setForm(p=>({...p,niveau:+e.target.value}))} className="w-full accent-[#1d6a40]"/>
+            </div>
+            <div>
+              <label className="block text-[0.68rem] font-semibold text-[#9a9a8a] uppercase tracking-widest mb-1.5">Catégorie</label>
+              <select value={form.categorie} onChange={e=>setForm(p=>({...p,categorie:e.target.value}))} className="w-full px-3 py-2.5 bg-[#f6f5f0] border border-[#e2e1d8] rounded-xl text-sm outline-none focus:border-[#1d6a40]">
+                {categories.map(c=><option key={c}>{c}</option>)}
+              </select>
             </div>
             <div className="flex justify-end gap-2">
               <Btn variant="ghost" onClick={()=>setShowForm(false)}>Annuler</Btn>
@@ -383,17 +589,17 @@ function Competences({ portfolio, onRefresh }) {
           <p className="text-[#9a9a8a] text-sm">Aucune compétence encore.</p>
         </div>
       )}
-      {Object.entries(grouped).map(([cat,comps]) => (
+      {grouped && Object.entries(grouped).map(([cat, skills]) => (
         <Card key={cat} title={cat}>
           <div className="space-y-3">
-            {comps.map(c => (
-              <div key={c._id} className="flex items-center gap-3">
-                <div className="w-24 text-sm text-[#4a4a40] font-medium flex-shrink-0">{c.nom}</div>
+            {skills.map(s => (
+              <div key={s._id} className="flex items-center gap-3">
+                <span className="text-sm text-[#1a1a14] w-32 flex-shrink-0 font-medium">{s.nom}</span>
                 <div className="flex-1 h-2 bg-[#f6f5f0] rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#1d6a40] to-[#25a058] rounded-full" style={{width:`${c.niveau}%`}}></div>
+                  <div className="h-full bg-gradient-to-r from-[#1d6a40] to-[#25a058] rounded-full" style={{width:`${s.niveau}%`}}/>
                 </div>
-                <span className="text-xs text-[#9a9a8a] w-10 text-right">{c.niveau}%</span>
-                <Btn variant="danger" onClick={()=>handleDelete(c._id)}>🗑</Btn>
+                <span className="text-xs text-[#9a9a8a] w-8 text-right">{s.niveau}%</span>
+                <Btn variant="danger" onClick={()=>handleDelete(s._id)}>🗑</Btn>
               </div>
             ))}
           </div>
@@ -403,84 +609,31 @@ function Competences({ portfolio, onRefresh }) {
   );
 }
 
-
-
 function Template({ user, onRefresh }) {
   const { setUser } = useAuth();
-  const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(user?.template || 'minimal');
-
+  const [loading, setLoading] = useState(false);
   const templates = [
-    {
-      id: 'minimal', name: 'Minimaliste Clair',
-      bg: '#f6f5f0', circle: 'rgba(29,106,64,0.15)',
-      stripe: 'linear-gradient(90deg,#1d6a40,#25a058)',
-      lines: ['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.07)', 'rgba(0,0,0,0.05)']
-    },
-    {
-      id: 'dark', name: 'Futuriste Sombre',
-      bg: '#0d0d14', circle: 'rgba(108,99,255,0.3)',
-      stripe: 'linear-gradient(90deg,#6c63ff,#00e5ff)',
-      lines: ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.08)']
-    },
-    {
-      id: 'forest', name: 'Vert Forêt',
-      bg: '#0d1a12', circle: 'rgba(37,160,88,0.25)',
-      stripe: 'linear-gradient(90deg,#25a058,#7eeaa0)',
-      lines: ['rgba(150,220,170,0.2)', 'rgba(150,220,170,0.15)', 'rgba(150,220,170,0.1)']
-    },
-    {
-      id: 'terminal', name: 'Retro Terminal',
-      bg: '#0a0a0a', circle: 'rgba(0,255,65,0.2)',
-      stripe: 'linear-gradient(90deg,#00ff41,#00cc33)',
-      lines: ['rgba(0,255,65,0.15)', 'rgba(0,255,65,0.1)', 'rgba(0,255,65,0.07)']
-    },
-    {
-      id: 'glass', name: 'Glassmorphism',
-      bg: 'linear-gradient(135deg,#0f0c29,#302b63)',
-      circle: 'rgba(255,107,107,0.4)',
-      stripe: 'linear-gradient(90deg,#ff6b6b,#4ecdc4)',
-      lines: ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0.05)']
-    },
-    {
-      id: 'gradient', name: 'Gradient Violet/Rose',
-      bg: 'linear-gradient(135deg,#1a0533,#2d0b6b)',
-      circle: 'rgba(180,130,255,0.4)',
-      stripe: 'linear-gradient(90deg,#b482ff,#ff4d8d)',
-      lines: ['rgba(180,130,255,0.2)', 'rgba(180,130,255,0.12)', 'rgba(255,77,141,0.1)']
-    },
-    {
-      id: 'card', name: 'Card Layout',
-      bg: '#f0f2f5', circle: 'rgba(102,126,234,0.2)',
-      stripe: 'linear-gradient(90deg,#667eea,#764ba2)',
-      lines: ['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.03)']
-    },
-    {
-      id: 'magazine', name: 'Magazine',
-      bg: '#ffffff', circle: 'rgba(0,0,0,0.08)',
-      stripe: '#000000',
-      lines: ['rgba(0,0,0,0.12)', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.05)']
-    },
+    { id: 'minimal', name: 'Minimal', bg: '#f6f5f0', circle: 'rgba(29,106,64,0.15)', stripe: 'linear-gradient(90deg,#1d6a40,#25a058)', lines: ['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.07)', 'rgba(0,0,0,0.05)'] },
+    { id: 'dark', name: 'Dark Mode', bg: '#0f0f0e', circle: 'rgba(37,160,88,0.3)', stripe: 'linear-gradient(90deg,#25a058,#1d6a40)', lines: ['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.07)'] },
+    { id: 'forest', name: 'Forest', bg: 'linear-gradient(135deg,#1a3a2a,#0d2418)', circle: 'rgba(100,200,120,0.3)', stripe: 'linear-gradient(90deg,#4caf50,#81c784)', lines: ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.07)', 'rgba(255,255,255,0.05)'] },
+    { id: 'terminal', name: 'Terminal', bg: '#0d1117', circle: 'rgba(0,255,65,0.2)', stripe: '#00ff41', lines: ['rgba(0,255,65,0.3)', 'rgba(0,255,65,0.2)', 'rgba(0,255,65,0.1)'] },
+    { id: 'glass', name: 'Glass / Aurora', bg: 'linear-gradient(135deg,#0f0c29,#302b63)', circle: 'rgba(255,107,107,0.4)', stripe: 'linear-gradient(90deg,#ff6b6b,#4ecdc4)', lines: ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.08)', 'rgba(255,255,255,0.05)'] },
+    { id: 'gradient', name: 'Gradient Violet/Rose', bg: 'linear-gradient(135deg,#1a0533,#2d0b6b)', circle: 'rgba(180,130,255,0.4)', stripe: 'linear-gradient(90deg,#b482ff,#ff4d8d)', lines: ['rgba(180,130,255,0.2)', 'rgba(180,130,255,0.12)', 'rgba(255,77,141,0.1)'] },
+    { id: 'card', name: 'Card Layout', bg: '#f0f2f5', circle: 'rgba(102,126,234,0.2)', stripe: 'linear-gradient(90deg,#667eea,#764ba2)', lines: ['rgba(0,0,0,0.08)', 'rgba(0,0,0,0.05)', 'rgba(0,0,0,0.03)'] },
+    { id: 'magazine', name: 'Magazine', bg: '#ffffff', circle: 'rgba(0,0,0,0.08)', stripe: '#000000', lines: ['rgba(0,0,0,0.12)', 'rgba(0,0,0,0.08)', 'rgba(0,0,0,0.05)'] },
   ];
-
   const handleSave = async () => {
     setLoading(true);
-    try {
-      await updateProfile({ template: selected });
-      setUser(p => ({ ...p, template: selected }));
-      toast.success('Template mis à jour !');
-      onRefresh();
-    } catch { toast.error('Erreur'); }
-    finally { setLoading(false); }
+    try { await updateProfile({ template: selected }); setUser(p => ({ ...p, template: selected })); toast.success('Template mis à jour !'); onRefresh(); }
+    catch { toast.error('Erreur'); } finally { setLoading(false); }
   };
-
   return (
     <div className="space-y-6">
       <h2 className="font-serif text-2xl font-normal">Choisir un template</h2>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {templates.map(t => (
-          <div key={t.id} onClick={() => setSelected(t.id)}
-            className={`rounded-2xl overflow-hidden border-2 cursor-pointer transition-all hover:-translate-y-1 ${selected === t.id ? 'border-[#1d6a40] shadow-lg' : 'border-[#e2e1d8]'}`}>
+          <div key={t.id} onClick={() => setSelected(t.id)} className={`rounded-2xl overflow-hidden border-2 cursor-pointer transition-all hover:-translate-y-1 ${selected === t.id ? 'border-[#1d6a40] shadow-lg' : 'border-[#e2e1d8]'}`}>
             <div className="h-32 p-3 flex flex-col gap-1.5 relative" style={{ background: t.bg }}>
               <div className="w-7 h-7 rounded-full mb-1" style={{ background: t.circle }}></div>
               {t.lines.map((c, j) => (
@@ -531,6 +684,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const isAdmin = user?.email === ADMIN_EMAIL;
+
   const fetchPortfolio = async () => {
     try { const res = await getMyPortfolio(); setPortfolio(res.data.portfolio); }
     catch { toast.error('Erreur chargement'); } finally { setLoading(false); }
@@ -542,6 +697,7 @@ export default function Dashboard() {
     if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-[#1d6a40] border-t-transparent rounded-full animate-spin"></div></div>;
     switch(activeTab) {
       case 'overview':    return <Overview portfolio={portfolio} user={user}/>;
+      case 'analytics':   return <Analytics portfolio={portfolio} user={user} isAdmin={isAdmin}/>;
       case 'profile':     return <Profile portfolio={portfolio} user={user} onRefresh={fetchPortfolio}/>;
       case 'projets':     return <Projets portfolio={portfolio} onRefresh={fetchPortfolio}/>;
       case 'experiences': return <Experiences portfolio={portfolio} onRefresh={fetchPortfolio}/>;
@@ -577,6 +733,9 @@ export default function Dashboard() {
             <button key={item.id} onClick={()=>{ setActiveTab(item.id); setSidebarOpen(false); }}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all mb-0.5 ${activeTab===item.id?'bg-[#e8f5ee] text-[#1d6a40]':'text-[#4a4a40] hover:bg-[#f6f5f0]'}`}>
               <span>{item.icon}</span>{item.label}
+              {item.id === 'analytics' && isAdmin && (
+                <span className="ml-auto text-[0.6rem] bg-[#1d6a40] text-white px-1.5 py-0.5 rounded-full">Admin</span>
+              )}
             </button>
           ))}
         </nav>

@@ -125,9 +125,35 @@ router.get('/:username', async (req, res) => {
     const portfolio = await Portfolio.findOne({ user: user._id });
     if (!portfolio || !user.isPublic) return res.status(404).json({ success: false, message: 'Portfolio non disponible' });
 
-    // Incrémenter vues
+    // Incrémenter vues (compteur simple existant)
     portfolio.vues += 1;
     await portfolio.save();
+
+    // ── Tracking Analytics détaillé ──
+    try {
+      const Analytics = require('../models/Analytics');
+      const ip = (
+        req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+        req.headers['x-real-ip'] ||
+        req.socket?.remoteAddress || ''
+      );
+      // Géolocalisation async (non bloquant)
+      fetch(`http://ip-api.com/json/${ip}?fields=country,city,status`)
+        .then(r => r.json())
+        .then(geo => {
+          Analytics.create({
+            portfolioUsername: user.username,
+            portfolioUser: user._id,
+            ip,
+            pays: geo.status === 'success' ? (geo.country || 'Inconnu') : 'Inconnu',
+            ville: geo.status === 'success' ? (geo.city || '') : '',
+            page: `/p/${user.username}`,
+            userAgent: req.headers['user-agent'] || '',
+          }).catch(() => {});
+        })
+        .catch(() => {});
+    } catch (_) {}
+    // ── Fin tracking ──
 
     res.json({
       success: true,
