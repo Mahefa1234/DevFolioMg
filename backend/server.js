@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const passport = require('passport');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -32,6 +33,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(passport.initialize());
 
 // ── ROUTES ──
 app.use('/api/auth',      require('./routes/auth'));
